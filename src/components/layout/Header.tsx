@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Menu, MountainIcon, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
@@ -54,14 +54,17 @@ export function Header() {
               <span className="sr-only">Open navigation menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left">
-             <div className="flex justify-between items-center p-4 border-b">
-                <Link href="/" className="flex items-center gap-2 font-semibold" onClick={handleLinkClick}>
-                    <MountainIcon className="h-6 w-6 text-primary" />
-                    <span className="text-xl font-headline font-bold text-white">RR GROUP</span>
-                </Link>
-             </div>
-            <div className="grid gap-4 py-6">
+          <SheetContent side="left" className="p-0">
+            <SheetHeader className="p-4 border-b">
+               <SheetTitle>
+                  <Link href="/" className="flex items-center gap-2 font-semibold" onClick={handleLinkClick}>
+                      <MountainIcon className="h-6 w-6 text-primary" />
+                      <span className="text-xl font-headline font-bold text-white">RR GROUP</span>
+                  </Link>
+               </SheetTitle>
+               <SheetDescription className="sr-only">Main navigation menu</SheetDescription>
+            </SheetHeader>
+            <div className="grid gap-4 py-6 px-4">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
