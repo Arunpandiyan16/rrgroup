@@ -10,8 +10,23 @@ import type { Land } from '@/lib/types';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 function HeroSection() {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/listings?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push('/listings');
+    }
+  };
+  
   return (
     <section className="relative w-full h-[70vh] flex items-center justify-center text-center text-white overflow-hidden">
       <div className="absolute inset-0 bg-black/60 z-10" />
@@ -30,9 +45,24 @@ function HeroSection() {
         <p className="mt-4 max-w-[700px] text-lg md:text-xl text-gray-200">
           Discover exclusive land properties with RR Group. Your vision, our foundation.
         </p>
+         <form onSubmit={handleSearch} className="mt-8 w-full max-w-2xl">
+            <div className="relative">
+              <Input
+                type="search"
+                placeholder="Search by location or property name..."
+                className="w-full h-14 pl-12 pr-4 text-lg bg-white/90 text-foreground"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
+              <Button type="submit" size="lg" className="absolute right-2 top-1/2 -translate-y-1/2">
+                Search
+              </Button>
+            </div>
+        </form>
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <Button asChild size="lg" className="bg-primary hover:bg-accent text-primary-foreground">
-            <Link href="/listings">Explore Listings</Link>
+            <Link href="/listings">Explore All Listings</Link>
           </Button>
           <Button asChild variant="secondary" size="lg">
             <Link href="/recommendations">Get AI Recommendation</Link>
