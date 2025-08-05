@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2, Home, Upload, FileText, LogOut, MountainIcon, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { auth } from '@/lib/firebase';
@@ -140,14 +140,17 @@ export default function AdminLayout({
                   <span className="sr-only">Toggle navigation menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="flex flex-col">
-                <div className="flex h-14 items-center border-b px-4">
+              <SheetContent side="left" className="flex flex-col p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle>
                     <Link href="/" className="flex items-center gap-2 font-semibold" onClick={() => setIsSheetOpen(false)}>
                         <MountainIcon className="h-6 w-6 text-primary" />
                         <span className="">RR Group CRM</span>
                     </Link>
-                </div>
-                <div className="flex-1 overflow-y-auto">
+                  </SheetTitle>
+                  <SheetDescription className="sr-only">Admin navigation menu</SheetDescription>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto pt-4">
                     <NavContent onLinkClick={() => setIsSheetOpen(false)} />
                 </div>
                 <div className="mt-auto p-4 border-t">
