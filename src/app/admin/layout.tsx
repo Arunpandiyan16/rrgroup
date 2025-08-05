@@ -8,6 +8,8 @@ import { Loader2, Home, Upload, FileText, LogOut, MountainIcon } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 export default function AdminLayout({
   children,
@@ -17,56 +19,62 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
-  const [isVerified, setIsVerified] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      // In a real app, you would verify a token on the server.
-      // For this prototype, we'll use localStorage.
-      const authed = localStorage.getItem('rr_admin_auth') === 'true';
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsLoading(false);
 
       if (pathname === '/admin/login') {
-        if (authed) {
+        if (currentUser) {
           router.replace('/admin/dashboard');
-        } else {
-          setIsVerified(true);
         }
       } else {
-        if (!authed) {
+        if (!currentUser) {
           router.replace('/admin/login');
-        } else {
-          setIsVerified(true);
         }
       }
-    };
-    checkAuth();
+    });
+
+    return () => unsubscribe();
   }, [pathname, router]);
   
-  const handleLogout = () => {
-    localStorage.removeItem('rr_admin_auth');
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      router.push('/admin/login');
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+      });
+    }
   };
 
-  if (pathname === '/admin/login') {
-     if (!isVerified) {
-        return (
-          <div className="flex h-screen w-full items-center justify-center bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        );
-      }
-    return <>{children}</>;
-  }
-
-
-  if (!isVerified) {
+  if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+
+  if (!user) {
+     return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4">Redirecting to login...</p>
       </div>
     );
   }
