@@ -5,6 +5,39 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { MapPin, SquareAsterisk, DollarSign } from 'lucide-react';
 import { QuotationRequestDialog } from '@/components/QuotationRequestDialog';
+import type { Metadata } from 'next';
+
+type Props = {
+  params: { id: string }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const land = lands.find((l) => l.id === params.id);
+
+  if (!land) {
+    return {
+      title: 'Property Not Found',
+      description: 'The requested land listing could not be found.',
+    }
+  }
+
+  return {
+    title: `${land.name} | RR Group`,
+    description: land.description,
+    openGraph: {
+        title: `${land.name} | RR Group`,
+        description: land.description,
+        images: [
+            {
+                url: land.photos[0],
+                width: 1200,
+                height: 800,
+                alt: land.name,
+            },
+        ],
+    },
+  }
+}
 
 export default function LandDetailPage({ params }: { params: { id: string } }) {
   const land = lands.find((l) => l.id === params.id);
