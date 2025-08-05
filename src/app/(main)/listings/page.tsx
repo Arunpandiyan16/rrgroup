@@ -1,22 +1,57 @@
+// src/app/(main)/listings/page.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LandCard } from '@/components/LandCard';
-import { lands } from '@/lib/data';
 import type { Land } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-
-const allLocations = [...new Set(lands.map((land) => land.location))];
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ListingsPage() {
-  const [filteredLands, setFilteredLands] = useState<Land[]>(lands);
+  const [allLands, setAllLands] = useState<Land[]>([]);
+  const [filteredLands, setFilteredLands] = useState<Land[]>([]);
+  const [allLocations, setAllLocations] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [location, setLocation] = useState('all');
   const [minArea, setMinArea] = useState(0);
   const [maxPrice, setMaxPrice] = useState(5000000);
 
+  useEffect(() => {
+    const fetchLands = async () => {
+      setIsLoading(true);
+      const querySnapshot = await getDocs(collection(db, "lands"));
+      const landsData = querySnapshot.docs.map(doc => ({ ...doc.data(), firebaseId: doc.id } as Land));
+      
+      setAllLands(landsData);
+      setFilteredLands(landsData);
+      const uniqueLocations = [...new Set(landsData.map((land) => land.location))];
+      setAllLocations(uniqueLocations);
+      setIsLoading(false);
+    };
+
+    fetchLands();
+  }, []);
+
+  const filterLands = (loc: string, area: number, price: number) => {
+    let newFilteredLands = allLands;
+
+    if (loc !== 'all') {
+      newFilteredLands = newFilteredLands.filter((land) => land.location === loc);
+    }
+    if (area > 0) {
+      newFilteredLands = newFilteredLands.filter((land) => land.area >= area);
+    }
+    newFilteredLands = newFilteredLands.filter((land) => land.price <= price);
+
+    setFilteredLands(newFilteredLands);
+  };
+  
   const handleLocationChange = (value: string) => {
     setLocation(value);
     filterLands(value, minArea, maxPrice);
@@ -33,20 +68,6 @@ export default function ListingsPage() {
     setMaxPrice(price);
     filterLands(location, minArea, price);
   };
-  
-  const filterLands = (loc: string, area: number, price: number) => {
-     let newFilteredLands = lands;
-
-    if (loc !== 'all') {
-      newFilteredLands = newFilteredLands.filter((land) => land.location === loc);
-    }
-    if (area > 0) {
-      newFilteredLands = newFilteredLands.filter((land) => land.area >= area);
-    }
-    newFilteredLands = newFilteredLands.filter((land) => land.price <= price);
-
-    setFilteredLands(newFilteredLands);
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -60,7 +81,7 @@ export default function ListingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 p-6 bg-card rounded-lg border">
         <div>
           <Label htmlFor="location-filter" className="text-lg font-semibold mb-2 block text-primary">Location</Label>
-          <Select value={location} onValueChange={handleLocationChange}>
+          <Select value={location} onValueChange={handleLocationChange} disabled={isLoading}>
             <SelectTrigger id="location-filter" className="w-full">
               <SelectValue placeholder="All Locations" />
             </SelectTrigger>
@@ -83,6 +104,7 @@ export default function ListingsPage() {
             value={minArea || ''}
             onChange={handleAreaChange}
             className="w-full"
+            disabled={isLoading}
           />
         </div>
         <div>
@@ -95,12 +117,21 @@ export default function ListingsPage() {
             step={100000}
             defaultValue={[5000000]}
             onValueChange={handlePriceChange}
+            disabled={isLoading}
            />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredLands.length > 0 ? (
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="space-y-4">
+              <Skeleton className="h-60 w-full" />
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-6 w-1/2" />
+            </div>
+          ))
+        ) : filteredLands.length > 0 ? (
           filteredLands.map((land) => <LandCard key={land.id} land={land} />)
         ) : (
           <p className="col-span-full text-center text-lg text-muted-foreground">No properties match your criteria.</p>

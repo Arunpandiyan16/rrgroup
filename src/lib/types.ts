@@ -1,5 +1,6 @@
 export interface Land {
-  id: string;
+  firebaseId: string; // The document ID in Firestore
+  id: string; // The URL-friendly slug
   name: string;
   location: string;
   area: number; // in acres

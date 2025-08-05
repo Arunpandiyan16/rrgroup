@@ -1,11 +1,13 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   "projectId": "rr-group-d8j4y",
   "appId": "1:783728306567:web:8b0d2ec2aefbd80ddf0b22",
-  "storageBucket": "rr-group-d8j4y.firebasestorage.app",
+  "storageBucket": "rr-group-d8j4y.appspot.com",
   "apiKey": "AIzaSyABKt9K0h-UPpAcmn3nHXFLG0oR5U_3h04",
   "authDomain": "rr-group-d8j4y.firebaseapp.com",
   "measurementId": "",
@@ -15,5 +17,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-export { app, auth };
+export { app, auth, db, storage };

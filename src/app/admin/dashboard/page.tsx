@@ -2,10 +2,25 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home, Users, FileText, Landmark } from 'lucide-react';
-import { lands } from '@/lib/data';
+import { Landmark, FileText, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function AdminDashboardPage() {
+  const [landCount, setLandCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoading(true);
+      const landsSnapshot = await getDocs(collection(db, "lands"));
+      setLandCount(landsSnapshot.size);
+      // Add logic for other stats later
+      setIsLoading(false);
+    };
+    fetchStats();
+  }, []);
 
   return (
     <div className="flex flex-col">
@@ -20,7 +35,11 @@ export default function AdminDashboardPage() {
               <Landmark className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{lands.length}</div>
+              {isLoading ? (
+                <div className="text-2xl font-bold">...</div>
+              ) : (
+                <div className="text-2xl font-bold">{landCount}</div>
+              )}
               <p className="text-xs text-muted-foreground">Currently active properties</p>
             </CardContent>
           </Card>
@@ -31,7 +50,7 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">+45</div>
-              <p className="text-xs text-muted-foreground">+18.2% from last month</p>
+              <p className="text-xs text-muted-foreground">Placeholder data</p>
             </CardContent>
           </Card>
            <Card>
@@ -41,7 +60,7 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">+128</div>
-              <p className="text-xs text-muted-foreground">+21% from last month</p>
+              <p className="text-xs text-muted-foreground">Placeholder data</p>
             </CardContent>
           </Card>
           <Card>
@@ -51,7 +70,7 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">+24</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <p className="text-xs text-muted-foreground">Placeholder data</p>
             </CardContent>
           </Card>
         </div>

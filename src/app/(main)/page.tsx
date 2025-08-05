@@ -1,8 +1,15 @@
+// src/app/(main)/page.tsx
+"use client";
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { lands } from '@/lib/data';
 import { LandCard } from '@/components/LandCard';
+import { useEffect, useState } from 'react';
+import type { Land } from '@/lib/types';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function HeroSection() {
   return (
@@ -37,7 +44,21 @@ function HeroSection() {
 }
 
 function FeaturedListings() {
-  const featuredLands = lands.slice(0, 3);
+  const [featuredLands, setFeaturedLands] = useState<Land[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedLands = async () => {
+      setIsLoading(true);
+      const landsRef = collection(db, "lands");
+      const q = query(landsRef, limit(3));
+      const querySnapshot = await getDocs(q);
+      const landsData = querySnapshot.docs.map(doc => ({ ...doc.data(), firebaseId: doc.id } as Land));
+      setFeaturedLands(landsData);
+      setIsLoading(false);
+    };
+    fetchFeaturedLands();
+  }, []);
 
   return (
     <section className="w-full py-12 md:py-24 lg:py-32 bg-background">
@@ -49,9 +70,19 @@ function FeaturedListings() {
           </p>
         </div>
         <div className="mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
-          {featuredLands.map((land) => (
-            <LandCard key={land.id} land={land} />
-          ))}
+          {isLoading ? (
+             Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="space-y-4">
+                  <Skeleton className="h-60 w-full" />
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-6 w-1/2" />
+                </div>
+              ))
+          ) : (
+            featuredLands.map((land) => (
+              <LandCard key={land.id} land={land} />
+            ))
+          )}
         </div>
       </div>
     </section>

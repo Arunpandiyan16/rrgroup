@@ -12,18 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2, Upload } from 'lucide-react';
+import { db, storage } from '@/lib/firebase';
+import { addDoc, collection } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const uploadFormSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters."),
+  name: z.string().min(5, "Title must be at least 5 characters."),
   area: z.coerce.number().positive("Area must be a positive number."),
-  areaUnit: z.enum(["sqft", "cents"]),
-  district: z.string().min(3, "District is required."),
-  taluk: z.string().min(3, "Taluk is required."),
-  village: z.string().min(3, "Village is required."),
+  location: z.string().min(3, "Location is required"),
   price: z.coerce.number().positive("Price must be a positive number."),
-  priceUnit: z.enum(["per-sqft", "per-cent"]),
   description: z.string().min(20, "Description must be at least 20 characters."),
-  images: z.any().refine(files => files?.length > 0, 'At least one image is required.'),
+  photos: z.any().refine(files => files?.length > 0, 'At least one image is required.'),
 });
 
 export default function AdminUploadPage() {
@@ -33,32 +32,56 @@ export default function AdminUploadPage() {
     const form = useForm<z.infer<typeof uploadFormSchema>>({
         resolver: zodResolver(uploadFormSchema),
         defaultValues: {
-            title: "",
+            name: "",
             area: '' as any,
-            areaUnit: "sqft",
-            district: "",
-            taluk: "",
-            village: "",
+            location: "",
             price: '' as any,
-            priceUnit: "per-sqft",
             description: "",
+            photos: undefined,
         },
     });
 
     async function onSubmit(values: z.infer<typeof uploadFormSchema>) {
         setIsSubmitting(true);
-        console.log("Form Values:", values);
+        try {
+            const imageFiles = values.photos as FileList;
+            const imageUrls: string[] = [];
 
-        // Simulate upload
-        await new Promise(resolve => setTimeout(resolve, 2000));
+            for (const file of Array.from(imageFiles)) {
+                const storageRef = ref(storage, `lands/${Date.now()}-${file.name}`);
+                await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(storageRef);
+                imageUrls.push(downloadURL);
+            }
+            
+            const landId = values.name.toLowerCase().replace(/\s+/g, '-');
 
-        toast({
-            title: "Upload Successful!",
-            description: `Property "${values.title}" has been listed.`,
-        });
+            await addDoc(collection(db, "lands"), {
+                id: landId,
+                name: values.name,
+                area: values.area,
+                location: values.location,
+                price: values.price,
+                description: values.description,
+                photos: imageUrls,
+            });
 
-        form.reset();
-        setIsSubmitting(false);
+            toast({
+                title: "Upload Successful!",
+                description: `Property "${values.name}" has been listed.`,
+            });
+
+            form.reset();
+        } catch (error) {
+            console.error("Error uploading property:", error);
+            toast({
+                variant: 'destructive',
+                title: "Upload Failed",
+                description: "An error occurred while uploading the property.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
 
@@ -73,12 +96,25 @@ export default function AdminUploadPage() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                      <FormField
                         control={form.control}
-                        name="title"
+                        name="name"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Property Title</FormLabel>
                             <FormControl>
                                 <Input placeholder="e.g., Serene 5 Acre Plot with Lake View" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Location</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., Napa Valley, CA" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -91,29 +127,10 @@ export default function AdminUploadPage() {
                             name="area"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Area</FormLabel>
-                                <div className="flex gap-2">
+                                <FormLabel>Area (in acres)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="e.g., 5000" {...field} />
+                                    <Input type="number" placeholder="e.g., 50" {...field} />
                                 </FormControl>
-                                <FormField
-                                    control={form.control}
-                                    name="areaUnit"
-                                    render={({ field }) => (
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger className="w-[120px]">
-                                                    <SelectValue placeholder="Unit" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="sqft">Sq.ft</SelectItem>
-                                                <SelectItem value="cents">Cents</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                </div>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -124,70 +141,15 @@ export default function AdminUploadPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Price</FormLabel>
-                                <div className="flex gap-2">
                                 <FormControl>
-                                    <Input type="number" placeholder="e.g., 75000" {...field} />
+                                    <Input type="number" placeholder="e.g., 2500000" {...field} />
                                 </FormControl>
-                                 <FormField
-                                    control={form.control}
-                                    name="priceUnit"
-                                    render={({ field }) => (
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger className="w-[140px]">
-                                                    <SelectValue placeholder="Unit" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="per-sqft">per Sq.ft</SelectItem>
-                                                <SelectItem value="per-cent">per Cent</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                </div>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
                     </div>
                     
-                    <div>
-                        <FormLabel>Location</FormLabel>
-                        <div className="grid md:grid-cols-3 gap-4 mt-2">
-                             <FormField
-                                control={form.control}
-                                name="district"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormControl><Input placeholder="District" {...field} /></FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="taluk"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormControl><Input placeholder="Taluk" {...field} /></FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="village"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormControl><Input placeholder="Village" {...field} /></FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                    </div>
-
                      <FormField
                         control={form.control}
                         name="description"
@@ -204,12 +166,12 @@ export default function AdminUploadPage() {
 
                      <FormField
                         control={form.control}
-                        name="images"
+                        name="photos"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Property Images</FormLabel>
                             <FormControl>
-                                <Input type="file" multiple {...form.register('images')} />
+                                <Input type="file" multiple {...form.register('photos')} />
                             </FormControl>
                              <FormDescription>
                                 You can upload multiple images at once.

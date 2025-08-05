@@ -1,48 +1,71 @@
+// src/app/(main)/listings/[id]/page.tsx
+'use client'
+
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import { lands } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { MapPin, SquareAsterisk, DollarSign } from 'lucide-react';
 import { QuotationRequestDialog } from '@/components/QuotationRequestDialog';
-import type { Metadata } from 'next';
+import { useEffect, useState } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Land } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-type Props = {
-  params: { id: string }
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const land = lands.find((l) => l.id === params.id);
-
-  if (!land) {
-    return {
-      title: 'Property Not Found',
-      description: 'The requested land listing could not be found.',
-    }
-  }
-
-  return {
-    title: `${land.name} | RR Group`,
-    description: land.description,
-    openGraph: {
-        title: `${land.name} | RR Group`,
-        description: land.description,
-        images: [
-            {
-                url: land.photos[0],
-                width: 1200,
-                height: 800,
-                alt: land.name,
-            },
-        ],
-    },
-  }
-}
 
 export default function LandDetailPage({ params }: { params: { id: string } }) {
-  const land = lands.find((l) => l.id === params.id);
+  const [land, setLand] = useState<Land | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  if (!land) {
+  useEffect(() => {
+    if (!params.id) return;
+    
+    const fetchLand = async () => {
+      setIsLoading(true);
+      setError(false);
+      try {
+        const landsRef = collection(db, "lands");
+        const q = query(landsRef, where("id", "==", params.id));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          setError(true);
+        } else {
+          const landData = querySnapshot.docs[0].data() as Land;
+          setLand({ ...landData, firebaseId: querySnapshot.docs[0].id });
+        }
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchLand();
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+        <div className="container mx-auto px-4 py-12">
+            <div className="grid md:grid-cols-2 gap-12 items-start">
+                <div>
+                    <Skeleton className="w-full aspect-video rounded-lg"/>
+                </div>
+                <div>
+                    <Skeleton className="h-12 w-3/4 mb-4" />
+                    <Skeleton className="h-8 w-1/2 mb-6" />
+                    <Skeleton className="h-24 w-full mb-8" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            </div>
+        </div>
+    )
+  }
+
+  if (error || !land) {
     notFound();
   }
 
